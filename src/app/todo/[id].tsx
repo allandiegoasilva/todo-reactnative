@@ -1,12 +1,14 @@
 import { Stack } from "expo-router";
 import { theme } from "../../theme";
-import { StyleSheet } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import Input from "../../component/input";
 import Container from "../../component/container";
 import Button from "../../component/button";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { TaskDto } from "../../backend/dto/task-dto";
-import { CreateTask } from "../../backend/action/create-task";
+import { useLocalSearchParams } from "expo-router";
+import { UpdateTask } from "../../backend/action/update-task";
+import { ReadTask } from "../../backend/action/read-task";
 
 const styles = StyleSheet.create({
   container: {
@@ -18,24 +20,29 @@ const styles = StyleSheet.create({
 });
 
 export default function App() {
+  const { id } = useLocalSearchParams();
+
   const [invalid, setInvalid] = useState<string[]>([]);
+  const [success, setSuccess] = useState<boolean>(false);
+
   const [form, setForm] = useState<TaskDto>({
     title: "",
     description: "",
   });
 
-  async function add() {
+  async function update() {
     if (!form.title) {
       setInvalid(["title"]);
       return;
     }
-
-    const action = new CreateTask();
-    await action.create(form);
-    setForm({
-      title: "",
-      description: "",
+    const action = new UpdateTask();
+    await action.execute(id as any, {
+      title: form.title,
+      description: form.description,
     });
+
+    setSuccess(true);
+    setTimeout(() => setSuccess(false), 999);
   }
 
   function handleChange(key: string, value: string) {
@@ -45,14 +52,50 @@ export default function App() {
     setInvalid(items);
   }
 
+  async function loadTask() {
+    const action = new ReadTask();
+
+    const result = await action.execute(Number(id));
+
+    const task: TaskDto = result[0];
+
+    setForm({
+      title: task.title,
+      description: task.description,
+    });
+  }
+
+  useEffect(() => {
+    loadTask();
+  }, []);
+
   return (
     <>
       <Stack.Screen
         options={{
-          title: "Criar Tarefa",
+          title: "Atualizar Tarefa",
         }}
       />
       <Container>
+        {success && (
+          <View
+            style={{
+              backgroundColor: "green",
+              padding: 10,
+              borderRadius: 10,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: theme.fontSize.md,
+                color: theme.colors.white,
+                fontWeight: "bold",
+              }}
+            >
+              Atualizado com sucesso!
+            </Text>
+          </View>
+        )}
         <Input
           label="Título"
           value={form.title}
@@ -68,7 +111,7 @@ export default function App() {
           onChangeText={(text) => setForm({ ...form, description: text })}
           multiline
         />
-        <Button onPress={add} title="Adicionar" />
+        <Button onPress={update} title="Atualizar" />
       </Container>
     </>
   );

@@ -1,12 +1,18 @@
 import { Link, Stack } from "expo-router";
 import { theme } from "../theme";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { AntDesign, Ionicons } from "@expo/vector-icons";
+import { AntDesign, Feather, Ionicons } from "@expo/vector-icons";
 import Container from "../component/container";
 import { ReadTask } from "../backend/action/read-task";
 import { useEffect, useState } from "react";
 import { TaskDto } from "../backend/dto/task-dto";
 import { FlashList } from "@shopify/flash-list";
+import { router } from "expo-router";
+import { DeleteTask } from "../backend/action/delete-task";
+
+type TaskListDto = TaskDto & {
+  selected: boolean;
+};
 
 const styles = StyleSheet.create({
   image: {
@@ -21,6 +27,7 @@ const styles = StyleSheet.create({
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+    height: "100%",
     gap: 15,
   },
   card: {
@@ -30,31 +37,51 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 10,
     borderWidth: 0.5,
+    flexGrow: 1,
   },
 });
 
 export default function App() {
-  const [tasks, setTasks] = useState<TaskDto[]>([]);
-  const [pressed, setPressed] = useState<number[]>([]);
+  const [tasks, setTasks] = useState<TaskListDto[]>([]);
+  const [selectedItems, setSelectedItems] = useState<boolean>(false);
 
   async function loadTasks() {
     const action = new ReadTask();
-    const loaded = await action.execute();
-    setTasks(loaded);
+    let loaded: TaskDto[] | TaskListDto[] = await action.execute();
+    loaded = loaded.map((task: TaskDto) => ({ ...task, selected: false }));
+    setTasks(loaded as TaskListDto[]);
   }
 
-  function handlePressable(id: number | undefined) {
-    console.log("AQUI: ", id);
-    if (!id) return;
+  function handlePressable(param: TaskListDto) {
+    const items = tasks.map((task) => {
+      if (task.id != param.id) return task;
 
-    let items : number[] = [];
-    
-    if (pressed.includes(id))
-      items = pressed.filter((i) => i != id);
-    else 
-      items = [...pressed, id];
+      task.selected = !param.selected;
 
-    setPressed(items);
+      return task;
+    });
+
+    const task = items.find((task) => task.selected == true);
+    setSelectedItems(task ? true : false);
+    setTasks(items);
+  }
+
+  function handleClick(param: TaskListDto) {
+    if (!selectedItems) return router.replace("/todo/" + param.id);
+
+    handlePressable(param);
+  }
+
+  async function removeTask() {
+    const selectedTasks = tasks.filter((task) => task.selected == true);
+
+    const ids: number[] = selectedTasks.map((task) => Number(task.id));
+
+    const action = new DeleteTask();
+    await action.execute(ids);
+
+    setSelectedItems(false);
+    loadTasks();
   }
 
   useEffect(() => {
@@ -78,6 +105,43 @@ export default function App() {
         }}
       />
       <Container>
+        {selectedItems && (
+          <View
+            style={{
+              display: "flex",
+              flexDirection: "row",
+              justifyContent: "space-between",
+              gap: 10,
+            }}
+          >
+            <Pressable onPress={removeTask}>
+              <View
+                style={{
+                  padding: theme.padding,
+                  borderRadius: theme.borderRadius,
+                  backgroundColor: "red",
+                  display: "flex",
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 5,
+                }}
+              >
+                <Feather name="trash" size={15} color={theme.colors.white} />
+                <Text
+                  style={{
+                    fontWeight: "bold",
+                    color: "white",
+                    fontSize: theme.fontSize.md,
+                  }}
+                >
+                  Remover Selecionados
+                </Text>
+              </View>
+            </Pressable>
+          </View>
+        )}
+
         {tasks.length == 0 && (
           <View style={styles.empty}>
             <Ionicons
@@ -96,32 +160,39 @@ export default function App() {
             </Text>
           </View>
         )}
-        <FlashList
-          drawDistance={15}
-          ItemSeparatorComponent={() => <View style={{ height: 20 }} />}
-          renderItem={({
-            item: { id, title, description },
-          }: {
-            item: TaskDto;
-          }) => {
-            return (
-              <Pressable onLongPress={() => handlePressable(id)}>
-                <View
-                  style={{
-                    ...styles.card,
-                    borderColor: pressed.includes(id || 0)
-                      ? theme.colors.primary
-                      : theme.colors.muted,
-                  }}
+        {tasks.length > 0 && (
+          <FlashList
+            drawDistance={15}
+            ItemSeparatorComponent={() => <View style={{ height: 20 }} />}
+            renderItem={({ item: task }: { item: TaskListDto }) => {
+              return (
+                <Pressable
+                  onPress={() => handleClick(task)}
+                  onLongPress={() => handlePressable(task)}
+                  style={{ flex: 1, flexDirection: "row", width: "100%" }}
                 >
-                  <Text style={{ color: theme.colors.white }}>{title}</Text>
-                </View>
-              </Pressable>
-            );
-          }}
-          estimatedItemSize={100}
-          data={tasks}
-        />
+                  <View
+                    style={{
+                      ...styles.card,
+                      borderColor: task?.selected
+                        ? theme.colors.primary
+                        : theme.colors.muted,
+                    }}
+                  >
+                    <Text style={{ color: theme.colors.white }}>
+                      {task.title}
+                    </Text>
+                    <Text style={{ color: theme.colors.accent }}>
+                      {task?.description?.slice(30)}...
+                    </Text>
+                  </View>
+                </Pressable>
+              );
+            }}
+            estimatedItemSize={100}
+            data={tasks}
+          />
+        )}
       </Container>
     </>
   );

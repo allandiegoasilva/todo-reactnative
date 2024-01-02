@@ -31,13 +31,13 @@ const style = StyleSheet.create({
 
 export default function Button({ title, loading, ...props }: IButton) {
   return (
-    <View style={style.container}>
-      <Pressable {...props}>
+    <Pressable {...props}>
+      <View style={style.container}>
         {loading && (
           <Feather name="loader" size={24} color={theme.colors.white} />
         )}
         {title && <Text style={style.text}>{title}</Text>}
-      </Pressable>
-    </View>
+      </View>
+    </Pressable>
   );
 }

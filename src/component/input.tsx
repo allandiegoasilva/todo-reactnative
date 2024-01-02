@@ -10,6 +10,8 @@ import {
 interface IInput extends TextInputProps {
   label?: string;
   required?: boolean;
+  invalid?: boolean;
+  errMsg?: string;
 }
 
 const style = StyleSheet.create({
@@ -36,14 +38,32 @@ const style = StyleSheet.create({
   },
 });
 
-export default function Input({ label, required, ...props }: IInput) {
+export default function Input({
+  label,
+  invalid,
+  errMsg,
+  required,
+  ...props
+}: IInput) {
   return (
     <View style={style.container}>
       <View style={style.labelContainer}>
         <Text style={style.label}>{label}</Text>
-        {required && <Text style={{ color: "red" }}>*</Text>}
+        {required && <Text style={{ color: theme.colors.primary }}>*</Text>}
       </View>
-      <TextInput style={style.input} {...props} />
+      <TextInput
+        style={{
+          ...style.input,
+          borderWidth: 2,
+          borderColor: invalid ? theme.colors.primary : "transparent",
+        }}
+        {...props}
+      />
+      {invalid && (
+        <Text style={{ color: theme.colors.primary, fontWeight: "800" }}>
+          {errMsg}
+        </Text>
+      )}
     </View>
   );
 }
