@@ -67,7 +67,7 @@ export default function App() {
   }
 
   function handleClick(param: TaskListDto) {
-    if (!selectedItems) return router.replace("/todo/" + param.id);
+    if (!selectedItems) return router.push("/todo/" + param.id);
 
     handlePressable(param);
   }
@@ -93,18 +93,23 @@ export default function App() {
       <Stack.Screen
         options={{
           title: "Tarefas",
-          headerRight: () => (
-            <Link href={"/todo/create"} asChild>
-              <AntDesign
-                name="pluscircleo"
-                size={30}
-                color={theme.colors.primary}
-              />
-            </Link>
-          ),
         }}
       />
+
       <Container>
+        <Link
+          href={"/todo/create"}
+          style={{
+            position: "absolute",
+            bottom: 30,
+            right: 30,
+            backgroundColor: theme.colors.primary,
+            borderRadius: 360,
+          }}
+          asChild
+        >
+          <AntDesign name="pluscircleo" size={60} color={theme.colors.white} />
+        </Link>
         {selectedItems && (
           <View
             style={{
